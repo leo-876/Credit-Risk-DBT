@@ -1,0 +1,6 @@
+band_id,band_name,min_score,max_score,risk_label
+1,poor,300,559,high
+2,fair,560,659,medium_high
+3,good,660,724,medium
+4,very_good,725,759,low_medium
+5,excellent,760,900,low
