@@ -1,0 +1,54 @@
+name: 'credit_risk'
+version: '1.0.0'
+config-version: 2
+
+profile: 'credit_risk'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  # Credit risk thresholds
+  dpd_30_threshold: 30
+  dpd_60_threshold: 60
+  dpd_90_threshold: 90
+  charge_off_threshold: 180
+  # Reporting window
+  reporting_lookback_days: 90
+  # Environment flag
+  is_production: false
+
+models:
+  credit_risk:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: ephemeral
+      +schema: intermediate
+    marts:
+      credit_reporting:
+        +materialized: incremental
+        +schema: marts
+        +unique_key: snapshot_id
+      risk_monitoring:
+        +materialized: table
+        +schema: marts
+
+seeds:
+  credit_risk:
+    +schema: seeds
+    risk_bands:
+      +column_types:
+        band_id: integer
+        min_score: integer
+        max_score: integer
