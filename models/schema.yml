@@ -1,0 +1,126 @@
+version: 2
+
+models:
+  - name: stg_borrowers
+    description: >
+      Lightly transformed borrower entities. One row per borrower.
+      Source of truth for demographic / onboarding attributes.
+    columns:
+      - name: borrower_id
+        description: Unique borrower identifier (hex prefix BRW)
+        tests:
+          - unique
+          - not_null
+      - name: province_code
+        description: Canadian province / territory code (ISO 3166-2:CA)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ON', 'BC', 'AB', 'QC', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE', 'NT', 'YT', 'NU']
+      - name: credit_score_band
+        tests:
+          - accepted_values:
+              values: [poor, fair, good, very_good, excellent]
+      - name: is_active
+        tests:
+          - not_null
+
+  - name: stg_accounts
+    description: >
+      Cleaned account records. One row per account.
+      Delinquency_bucket maps raw status to an integer tier (0=current, 4=charged-off).
+    columns:
+      - name: account_id
+        tests:
+          - unique
+          - not_null
+      - name: borrower_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_borrowers')
+              field: borrower_id
+      - name: credit_limit_cad
+        tests:
+          - not_null
+      - name: delinquency_bucket
+        tests:
+          - accepted_values:
+              values: [-1, 0, 1, 2, 3, 4, -99]
+
+  - name: stg_monthly_balances
+    description: >
+      Monthly balance snapshot event stream. One row per account x month.
+      Core input for vintage curves, roll-rate analysis, and regulatory reporting.
+    columns:
+      - name: balance_id
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+
+  - name: stg_payments
+    description: >
+      Individual payment transactions. Multiple rows per account.
+      NSF/returned payments are preserved as risk signals.
+    columns:
+      - name: payment_id
+        tests:
+          - unique
+          - not_null
+      - name: payment_status
+        tests:
+          - accepted_values:
+              values: [settled, returned, pending]
+
+  - name: mart_credit_reporting_monthly
+    description: >
+      Regulatory-grade monthly trade-line snapshot. One row per account x month.
+      Incremental model: reruns last 3 months on each dbt run.
+    columns:
+      - name: snapshot_id
+        description: Surrogate key (account_id + snapshot_month)
+        tests:
+          - unique
+          - not_null
+      - name: snapshot_month
+        tests:
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+
+  - name: mart_portfolio_risk_summary
+    description: >
+      Portfolio roll-up by snapshot_month x product_type x dpd_bucket.
+      Powers the Credit Risk weekly review and Finance IFRS-9 staging.
+    columns:
+      - name: snapshot_month
+        tests:
+          - not_null
+      - name: product_type
+        tests:
+          - not_null
+
+seeds:
+  - name: risk_bands
+    description: Lookup table mapping credit score band labels to risk tiers.
+    columns:
+      - name: band_id
+        tests:
+          - unique
+          - not_null
+      - name: band_name
+        tests:
+          - unique
+          - accepted_values:
+              values: [poor, fair, good, very_good, excellent]
+      - name: risk_label
+        tests:
+          - accepted_values:
+              values: [high, medium_high, medium, low_medium, low]
