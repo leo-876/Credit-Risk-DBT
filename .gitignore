@@ -1,0 +1,27 @@
+# dbt
+target/
+dbt_packages/
+logs/
+*.log
+
+# local dev database
+*.duckdb
+*.duckdb.wal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+
+# dashboard output (rebuilt from pipeline)
+dashboard/data.json
+
+# repo setup scripts
+replay_commits.sh
+
+# OS
+.DS_Store
+Thumbs.db
