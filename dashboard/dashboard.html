@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Credit Risk Portfolio Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #0d0f12;
+    --surface: #13161b;
+    --border:  #1e2229;
+    --text:    #c9cdd6;
+    --muted:   #545a66;
+    --green:   #1db87a;
+    --yellow:  #e8a029;
+    --red:     #e05252;
+    --pink:    #c45e8a;
+    --darkred: #9e2b2b;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 32px 40px;
+  }
+
+  header {
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #fff;
+  }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 18px;
+  }
+
+  .kpi-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 26px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .kpi-value.warn   { color: var(--yellow); }
+  .kpi-value.danger { color: var(--red); }
+  .kpi-sub          { font-size: 11px; color: var(--muted); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 20px;
+  }
+
+  .card-span-2 { grid-column: span 2; }
+
+  .card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
+  }
+
+  .legend      { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .legend-dot  { width: 8px; height: 8px; border-radius: 1px; flex-shrink: 0; }
+
+  .dpd-list { display: flex; flex-direction: column; gap: 10px; }
+  .dpd-row  { display: flex; align-items: center; gap: 10px; }
+
+  .dpd-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    width: 70px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+
+  .dpd-track { flex: 1; background: var(--border); border-radius: 2px; height: 20px; overflow: hidden; }
+
+  .dpd-fill {
+    height: 100%;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  .dpd-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    width: 30px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .prov-list { display: flex; flex-direction: column; gap: 8px; }
+  .prov-row  { display: flex; align-items: center; gap: 8px; }
+
+  .prov-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  .prov-track { flex: 1; background: var(--border); border-radius: 2px; height: 12px; }
+  .prov-fill  { height: 100%; border-radius: 2px; }
+
+  .prov-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  #error-msg {
+    display: none;
+    background: rgba(224,82,82,0.1);
+    border: 1px solid rgba(224,82,82,0.3);
+    border-radius: 4px;
+    padding: 16px 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--red);
+    margin-bottom: 20px;
+  }
+
+  #error-msg code {
+    background: rgba(255,255,255,0.07);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CREDIT RISK / PORTFOLIO MONITOR</h1>
+</header>
+
+<div id="error-msg">
+  Could not load data.json. You need to serve this from a local server rather than opening it as a file directly.<br><br>
+  Run <code>python -m http.server</code> inside the dashboard/ folder, then open <code>http://localhost:8000</code> in your browser.
+</div>
+
+<div id="app" style="display:none">
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Total accounts</div>
+      <div class="kpi-value" id="kpi-accounts"></div>
+      <div class="kpi-sub" id="kpi-borrowers"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Portfolio balance</div>
+      <div class="kpi-value" id="kpi-balance"></div>
+      <div class="kpi-sub" id="kpi-utilization"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Delinquency rate</div>
+      <div class="kpi-value warn" id="kpi-delinquency"></div>
+      <div class="kpi-sub" id="kpi-delinquent-count"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Charge-off rate</div>
+      <div class="kpi-value danger" id="kpi-chargeoff"></div>
+      <div class="kpi-sub" id="kpi-chargeoff-count"></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:12px;">
+    <div class="card card-span-2">
+      <div class="card-title">Delinquency trend — account count by DPD bucket (last 12 months)</div>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#1db87a"></span>Current</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#e8a029"></span>DPD 1–30</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#d8603a"></span>DPD 31–60</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#c45e8a"></span>DPD 61–90</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#9e2b2b"></span>90+ / Charge-off</div>
+      </div>
+      <div style="position:relative;height:200px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">DPD distribution — latest snapshot</div>
+      <div class="dpd-list" id="dpd-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">NSF return rate — EFT payments</div>
+      <div style="position:relative;height:160px;">
+        <canvas id="nsfChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Delinquency rate by province</div>
+      <div class="prov-list" id="prov-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GRID = 'rgba(30,34,41,1)';
+const TICK = '#545a66';
+const MONO = 'IBM Plex Mono';
+
+function fmt_balance(n) {
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return '$' + Math.round(n / 1000) + 'K';
+  return '$' + n;
+}
+
+function dpd_color(label) {
+  return { 'Current': '#1db87a', 'DPD 1-30': '#e8a029', 'DPD 31-60': '#d8603a', 'DPD 61-90': '#c45e8a', '90+ / C-O': '#9e2b2b' }[label] || '#545a66';
+}
+
+function prov_color(pct) {
+  if (pct >= 30) return '#e05252';
+  if (pct >= 22) return '#e8a029';
+  return '#1db87a';
+}
+
+function render(data) {
+  const k = data.kpis;
+
+  document.getElementById('kpi-accounts').textContent        = k.total_accounts.toLocaleString();
+  document.getElementById('kpi-borrowers').textContent       = k.total_borrowers.toLocaleString() + ' borrowers';
+  document.getElementById('kpi-balance').textContent         = fmt_balance(k.total_portfolio_balance);
+  document.getElementById('kpi-utilization').textContent     = k.avg_utilization_pct + '% avg utilization';
+  document.getElementById('kpi-delinquency').textContent     = k.delinquency_rate_pct + '%';
+  document.getElementById('kpi-delinquent-count').textContent = k.delinquent_accounts + ' accounts affected';
+  document.getElementById('kpi-chargeoff').textContent       = k.charge_off_rate_pct + '%';
+  document.getElementById('kpi-chargeoff-count').textContent = k.charged_off_accounts + ' accounts';
+
+  // Trend chart - last 12 months
+  const trend = data.delinquency_trend.slice(-12);
+  new Chart(document.getElementById('trendChart'), {
+    type: 'bar',
+    data: {
+      labels: trend.map(r => r.month),
+      datasets: [
+        { label: 'Current',    data: trend.map(r => r.current_count),       backgroundColor: '#1db87a', stack: 's' },
+        { label: 'DPD 1-30',  data: trend.map(r => r.dpd_30_count),         backgroundColor: '#e8a029', stack: 's' },
+        { label: 'DPD 31-60', data: trend.map(r => r.dpd_60_count),         backgroundColor: '#d8603a', stack: 's' },
+        { label: 'DPD 61-90', data: trend.map(r => r.dpd_90_count),         backgroundColor: '#c45e8a', stack: 's' },
+        { label: '90+/C-O',   data: trend.map(r => r.serious_delinq_count), backgroundColor: '#9e2b2b', stack: 's' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { color: GRID }, ticks: { color: TICK, font: { family: MONO, size: 10 } } },
+        y: { stacked: true, grid: { color: GRID }, ticks: { color: TICK, font: { family: MONO, size: 10 } } }
+      }
+    }
+  });
+
+  // DPD distribution from latest snapshot
+  const latest = data.delinquency_trend[data.delinquency_trend.length - 1];
+  const dpd_data = [
+    { label: 'Current',    count: latest.current_count },
+    { label: 'DPD 1-30',  count: latest.dpd_30_count },
+    { label: 'DPD 31-60', count: latest.dpd_60_count },
+    { label: 'DPD 61-90', count: latest.dpd_90_count },
+    { label: '90+ / C-O', count: latest.serious_delinq_count },
+  ];
+  const max_count = Math.max(...dpd_data.map(d => d.count));
+  const dpdEl = document.getElementById('dpd-list');
+  dpd_data.forEach(d => {
+    const pct = (d.count / max_count * 100).toFixed(1);
+    const color = dpd_color(d.label);
+    const textColor = d.count > max_count * 0.25 ? '#000' : 'transparent';
+    dpdEl.innerHTML += `
+      <div class="dpd-row">
+        <div class="dpd-label">${d.label}</div>
+        <div class="dpd-track">
+          <div class="dpd-fill" style="width:${pct}%;background:${color};color:${textColor};">${d.count}</div>
+        </div>
+        <div class="dpd-count">${d.count}</div>
+      </div>`;
+  });
+
+  // NSF chart - last 12 months
+  const nsf = data.nsf_trend.slice(-12);
+  new Chart(document.getElementById('nsfChart'), {
+    type: 'line',
+    data: {
+      labels: nsf.map(r => r.month),
+      datasets: [{
+        data: nsf.map(r => r.nsf_rate_pct),
+        borderColor: '#c45e8a',
+        backgroundColor: 'rgba(196,94,138,0.08)',
+        borderWidth: 1.5,
+        pointRadius: 3,
+        pointBackgroundColor: '#c45e8a',
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: GRID }, ticks: { color: TICK, font: { family: MONO, size: 10 } } },
+        y: {
+          min: 0,
+          grid: { color: GRID },
+          ticks: { color: TICK, font: { family: MONO, size: 10 }, callback: v => v.toFixed(1) + '%' }
+        }
+      }
+    }
+  });
+
+  // Province bars
+  const maxPct = Math.max(...data.province_breakdown.map(p => p.delinquency_rate_pct));
+  const provEl = document.getElementById('prov-list');
+  data.province_breakdown.forEach(p => {
+    const barW = (p.delinquency_rate_pct / maxPct * 100).toFixed(1);
+    provEl.innerHTML += `
+      <div class="prov-row">
+        <span class="prov-code">${p.province_code}</span>
+        <div class="prov-track"><div class="prov-fill" style="width:${barW}%;background:${prov_color(p.delinquency_rate_pct)};"></div></div>
+        <span class="prov-pct">${p.delinquency_rate_pct}%</span>
+      </div>`;
+  });
+
+  document.getElementById('app').style.display = 'block';
+}
+
+fetch('data.json')
+  .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+  .then(render)
+  .catch(() => { document.getElementById('error-msg').style.display = 'block'; });
+</script>
+</body>
+</html>

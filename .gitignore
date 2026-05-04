@@ -16,8 +16,8 @@ __pycache__/
 venv/
 .env
 
-# dashboard output (rebuilt from pipeline)
-dashboard/data.json
+# # dashboard output (rebuilt from pipeline)
+# dashboard/data.json
 
 # repo setup scripts
 replay_commits.sh

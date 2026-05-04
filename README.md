@@ -61,6 +61,7 @@ Run with `dbt test`.
 
 ```bash
 python scripts/build_dashboard_data.py
+python -m http.server
 ```
 
-Runs the pipeline in-memory via DuckDB and writes `dashboard/data.json` with portfolio KPIs, delinquency trend, NSF rate, and province breakdown.
+Runs the pipeline in-memory via DuckDB and writes `dashboard/data.json` with portfolio KPIs, delinquency trend, NSF rate, and province breakdown, and views the dashboard file in `localhost:8000`.
