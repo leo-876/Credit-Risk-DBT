@@ -4,6 +4,10 @@ A dbt project simulating a credit risk reporting pipeline. Models cover the full
 
 Stack: dbt Core, DuckDB (local), Redshift (prod target), Python for seed generation.
 
+## Dashboard
+
+![Portfolio dashboard](assets/dashboard.png)
+
 ## Setup
 
 ```bash
